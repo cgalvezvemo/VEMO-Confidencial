@@ -380,6 +380,7 @@ const GRAND_TOTAL=COSTO_MES.reduce((s,e)=>s+e.reduce((ss,v)=>ss+v,0),0);
 // ══════════════════════════════════════════
 function fmt(n){if(n>=1e6)return'\$'+(n/1e6).toFixed(1)+'M';if(n>=1e3)return'\$'+Math.round(n/1e3).toLocaleString('es-MX')+'K';return'\$'+Math.round(n).toLocaleString('es-MX');}
 function fmtF(n){return'\$'+Math.round(n).toLocaleString('es-MX');}
+function M_(n){if(n>=1e6)return'\$'+(n/1e6).toFixed(1)+'M';if(n>=1e3)return'\$'+Math.round(n/1e3)+'K';return'\$'+Math.round(n);}
 function pctStr(v,dec=1){return(v>0?'+':'')+v.toFixed(dec)+'%';}
 
 Chart.defaults.color='#4a6060';
