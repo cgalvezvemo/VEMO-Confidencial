@@ -394,7 +394,7 @@ function showSec(id,el){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('sec-'+id).classList.add('active');
   el.classList.add('active');
-  if(id==='vsbud') setTimeout(()=>vbRender(),50);
+  if(id==='vsbud') setTimeout(()=>{try{vbRender();}catch(e){}},50);
   if(id==='bl') setTimeout(()=>selectBL(curBL||Object.keys(BL_DATA)[0]),50);
 }
 
@@ -438,7 +438,7 @@ document.getElementById('empTbody').innerHTML=rows.map(r=>{const sh=r.c/GRAND_TO
 // ══════════════════════════════════════════
 // RESUMEN — KPIs iniciales
 // ══════════════════════════════════════════
-(function(){
+try{(function(){
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   const setColor=(id,v)=>{const el=document.getElementById(id);if(el)el.style.color=v;};
   const periodoStr=MESES[0]+'–'+LMLBL;
@@ -462,19 +462,8 @@ document.getElementById('empTbody').innerHTML=rows.map(r=>{const sh=r.c/GRAND_TO
     set('ex-grow-sub',MESES[LM-1]+' → '+LMLBL);
     setColor('ex-grow',g>0?'#e05252':'#0eb87f');
   }
-  if(BUDGET&&BUDGET.total&&BUDGET.total.mxn){
-    const bMes=BUDGET.total.mxn[VB_MY-1];
-    if(bMes){
-      const vb=(totalMes[LM]-bMes)/bMes*100;
-      const card=document.getElementById('ex-bud-card');
-      if(card)card.style.display='';
-      set('ex-bud-lbl','vs Budget '+LMLBL);
-      set('ex-bud',(vb>0?'+':'')+vb.toFixed(1)+'%');
-      set('ex-bud-sub',fmtF(totalMes[LM])+' real vs '+fmtF(bMes)+' plan');
-      setColor('ex-bud',vb>0?'#e05252':'#0eb87f');
-    }
-  }
-})();
+  // Budget vs actuals set later by vbRender
+})();}catch(e){console.warn('KPI init error:',e);}
 
 // ══════════════════════════════════════════
 // DETALLE POR EMPRESA — DRILL DOWN
