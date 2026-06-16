@@ -1258,11 +1258,13 @@ function vbRender(){
       const hcCol=hcR!==null?hcR:'—', hcBCol=hcB!==null?hcB:'—';
       const dHCcol=dHC!==null?`<td class="r" ${cl(dHC)}>${dHC>0?'+':''}${dHC}</td>`:`<td class="r" style="color:var(--muted)">—</td>`;
       const cppRcol=cppR?`<td class="r">${fmtF(cppR)}</td>`:`<td class="r" style="color:var(--muted)">—</td>`;
-      const cppBcol=cppB?`<td class="r" style="color:var(--muted)">${fmtF(cppB)}</td>`:`<td class="r" style="color:var(--muted)">—</td>`;
-      return `<tr onclick="${r.click}" style="cursor:pointer"><td><div style="display:flex;align-items:center;gap:7px"><div class="dot8" style="background:${COLORS[i%COLORS.length]}"></div><span style="font-weight:600">${r.nm}</span></div></td><td class="r">${fmtF(am)}</td><td class="r" style="color:var(--muted)">${fmtF(bm)}</td><td class="r" ${cl(vm)}>${vm>0?'▲':'▼'} ${Math.abs(vm).toFixed(1)}%</td><td class="r" style="font-weight:600">${fmtF(ay)}</td><td class="r" style="color:var(--muted)">${fmtF(by)}</td><td class="r" ${cl(vy)}>${vy>0?'▲':'▼'} ${Math.abs(vy).toFixed(1)}%</td><td class="r" style="font-weight:600">${hcCol}</td><td class="r" style="color:var(--muted)">${hcBCol}</td>${dHCcol}${cppRcol}${cppBcol}<td class="r">${used.toFixed(0)}%</td></tr>`;
+      const cppBcol=cppB?`<td class="r">${fmtF(cppB)}</td>`:`<td class="r" style="color:var(--muted)">—</td>`;
+      return `<tr${r.click?` onclick="${r.click}" style="cursor:pointer"`:''}><td>${r.nm}</td><td class="r">${fmtF(am)}</td><td class="r">${fmtF(bm)}</td><td class="r" ${cl(vm)}>${pctStr(vm)}</td><td class="r">${fmtF(ay)}</td><td class="r">${fmtF(by)}</td><td class="r" ${cl(vy)}>${pctStr(vy)}</td><td class="r">${hcCol}</td><td class="r">${hcBCol}</td>${dHCcol}${cppRcol}${cppBcol}<td class="r">${(used).toFixed(0)}%</td></tr>`;
     }).join('');
-    document.getElementById('vb-table-title').textContent='Desglose — '+nm+' · clic en una fila para filtrar';
-  } else {
-    // hoja: tabla mensual
-    const hasHCleaf=act.h&&bud.hc&&bud.hc.length;
-    document.getElementById('vbThead').inn
+  }
+}
+
+vbRender();
+</script>
+</body>
+</html>
