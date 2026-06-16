@@ -1138,13 +1138,7 @@ const MABR=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','D
 const VB_YL=MABR.map(m=>m+CURY);             // eje 12 meses del año en curso
 function vbBudgetFor(s){
   if(!BUDGET.year) return null;
-  if(s.type==='vemo'){
-    // Solo Corporate + CF: suma de funciones presupuestadas
-    const _fs=Object.keys(BUDGET.funcs||{});
-    if(!_fs.length) return BUDGET.total||null;
-    return {mxn:Array.from({length:12},(_,i)=>_fs.reduce((a,n)=>a+((BUDGET.funcs[n].mxn||[])[i]||0),0)),
-            hc: Array.from({length:12},(_,i)=>_fs.reduce((a,n)=>a+((BUDGET.funcs[n].hc||[])[i]||0),0))};
-  }
+  if(s.type==='vemo') return BUDGET.total||null;
   if(s.type==='bl'){
     const names=BL_DATA[s.bl].empresas;
     const fs=names.filter(n=>BUDGET.funcs[n]&&BUDGET.funcs[n].mxn);
@@ -1157,19 +1151,14 @@ function vbBudgetFor(s){
   return null;
 }
 function vbActualFor(s){
-  if(s.type==='vemo'){
-    // Solo Corporate + CF (apples-to-apples vs BUDGET.funcs)
-    const _k=['CORPORATE','CROSS FUNCTIONAL'].filter(k=>BL_DATA[k]);
-    return {m:MESES.map((_,i)=>_k.reduce((a,k)=>a+(BL_DATA[k].monthly[i]||0),0)),
-            h:MESES.map((_,i)=>_k.reduce((a,k)=>a+(BL_DATA[k].monthly_hc[i]||0),0))};
-  }
+  if(s.type==='vemo') return {m:MESES.map((_,i)=>COSTO_MES.reduce((a,e)=>a+e[i],0)),h:HC_MES};
   if(s.type==='bl') return {m:BL_DATA[s.bl].monthly,h:BL_DATA[s.bl].monthly_hc};
   if(s.type==='func'){const r=BL_DATA[s.bl].rows.find(r=>r.name===s.name);return r?{m:r.monthly,h:r.monthly_hc}:null;}
   if(s.type==='dep'){const a=(BL_DATA['LTO'].rows[0]||{areas:{}}).areas[s.name];return a?{m:a.monthly,h:a.monthly_hc}:null;}
   return null;
 }
 function vbName(s){
-  if(s.type==='vemo') return 'Corp + CF';
+  if(s.type==='vemo') return 'Total VEMO';
   if(s.type==='bl') return s.bl;
   return s.name+' · '+(s.type==='dep'?'LTO':s.bl);
 }
@@ -1335,7 +1324,7 @@ function vbRender(){
     document.getElementById('vbTbody').innerHTML='<tr><td colspan="13" style="color:var(--muted);text-align:center;padding:16px;">Sin desglose disponible para esta selección</td></tr>';
   } else if(rows.length){
     document.getElementById('vbThead').innerHTML='<tr><th>Grupo</th><th class="r">Real '+LMLBL+'</th><th class="r">Bud Mes</th><th class="r">Var % Mes</th><th class="r">Real YTD</th><th class="r">Bud YTD</th><th class="r">Var % YTD</th><th class="r">HC Real</th><th class="r">HC Plan</th><th class="r">Δ HC</th><th class="r">$/HC Real</th><th class="r">$/HC Plan</th><th class="r">% FY usado</th></tr>';
-    let _tbody=rows.map((r,i)=>{
+    document.getElementById('vbTbody').innerHTML=rows.map((r,i)=>{
       if(!r.act||!r.bud||!r.bud.mxn) return `<tr><td>${r.nm}</td><td class="r" colspan="12" style="color:var(--muted)">sin budget</td></tr>`;
       const am=r.act.m[LM], bm=r.bud.mxn[VB_MY-1];
       const ay=r.act.m.slice(IDXC).reduce((a,v)=>a+v,0), by=r.bud.mxn.slice(0,VB_MY).reduce((a,v)=>a+v,0);
@@ -1346,19 +1335,6 @@ function vbRender(){
       const cppA=ahc>0?fmtF(Math.round(am/ahc)):'—', cppB=bhc>0?fmtF(Math.round(bm/bhc)):'—';
       return `<tr style="cursor:pointer" onclick="${r.click}"><td style="color:var(--teal);font-weight:600">${r.nm}</td><td class="r">${fmt(am)}</td><td class="r">${fmt(bm)}</td><td class="r" style="color:${vm>5?'var(--red)':vm<-5?'var(--teal)':'inherit'}">${(vm>=0?'+':'')+vm.toFixed(1)}%</td><td class="r">${fmt(ay)}</td><td class="r">${fmt(by)}</td><td class="r" style="color:${vy>5?'var(--red)':vy<-5?'var(--teal)':'inherit'}">${(vy>=0?'+':'')+vy.toFixed(1)}%</td><td class="r">${ahc??'—'}</td><td class="r">${bhc??'—'}</td><td class="r">${dhc!==null?(dhc>0?'+':'')+dhc:'—'}</td><td class="r">${cppA}</td><td class="r">${cppB}</td><td class="r" style="color:${used>105?'var(--red)':used>95?'var(--amber)':'inherit'}">${used.toFixed(1)}%</td></tr>`;
     }).join('');
-    // Fila TOTAL VEMO al final (para scope vemo)
-    if(vbScope.type==='vemo'&&BUDGET.total&&BUDGET.total.mxn){
-      const _ta={m:MESES.map((_,i)=>COSTO_MES.reduce((a,e)=>a+e[i],0)),h:HC_MES};
-      const _tb=BUDGET.total;
-      const _am=_ta.m[LM], _bm=_tb.mxn[VB_MY-1];
-      const _ay=_ta.m.slice(IDXC).reduce((a,v)=>a+v,0), _by=_tb.mxn.slice(0,VB_MY).reduce((a,v)=>a+v,0);
-      const _fy=_tb.mxn.reduce((a,v)=>a+v,0);
-      const _vm=_bm>0?(_am-_bm)/_bm*100:0, _vy=_by>0?(_ay-_by)/_by*100:0, _used=_fy>0?_ay/_fy*100:0;
-      const _ahc=_ta.h[LM]??null, _bhc=(_tb.hc||[])[VB_MY-1]??null;
-      const _dhc=_ahc!==null&&_bhc!==null?_ahc-_bhc:null;
-      _tbody+=`<tr style="font-weight:700;border-top:2px solid var(--border2);background:var(--s2)"><td style="color:var(--forest-dark)">▸ TOTAL VEMO</td><td class="r">${fmt(_am)}</td><td class="r">${fmt(_bm)}</td><td class="r" style="color:${_vm>5?'var(--red)':_vm<-5?'var(--teal)':'inherit'}">${(_vm>=0?'+':'')+_vm.toFixed(1)}%</td><td class="r">${fmt(_ay)}</td><td class="r">${fmt(_by)}</td><td class="r" style="color:${_vy>5?'var(--red)':_vy<-5?'var(--teal)':'inherit'}">${(_vy>=0?'+':'')+_vy.toFixed(1)}%</td><td class="r">${_ahc??'—'}</td><td class="r">${_bhc??'—'}</td><td class="r">${_dhc!==null?(_dhc>0?'+':'')+_dhc:'—'}</td><td class="r">—</td><td class="r">—</td><td class="r" style="color:${_used>105?'var(--red)':_used>95?'var(--amber)':'inherit'}">${_used.toFixed(1)}%</td></tr>`;
-    }
-    document.getElementById('vbTbody').innerHTML=_tbody;
   }
 }
 </script>
