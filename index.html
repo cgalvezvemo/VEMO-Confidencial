@@ -1329,5 +1329,13 @@ function vbRender(){
       const am=r.act.m[LM], bm=r.bud.mxn[VB_MY-1];
       const ay=r.act.m.slice(IDXC).reduce((a,v)=>a+v,0), by=r.bud.mxn.slice(0,VB_MY).reduce((a,v)=>a+v,0);
       const fy=r.bud.mxn.reduce((a,v)=>a+v,0);
-      const vm=bm>0?(am-bm)/bm*100:0, vy=by>0?(ay-by)/by*100:0, used=fy>0?ay/fy*100:0;
-  
+      const vm=bm>0?(am-bm)/bm*100:0, vy=by>0?(ay-by)/by*100:0, used=fy>0?ay/fy*100:0;      const ahc=r.act.h?.[LM]??null, bhc=(r.bud.hc||[])[VB_MY-1]??null;
+      const dhc=ahc!==null&&bhc!==null?ahc-bhc:null;
+      const cppA=ahc>0?fmtF(Math.round(am/ahc)):'—', cppB=bhc>0?fmtF(Math.round(bm/bhc)):'—';
+      return `<tr style="cursor:pointer" onclick="${r.click}"><td style="color:var(--teal);font-weight:600">${r.nm}</td><td class="r">${fmt(am)}</td><td class="r">${fmt(bm)}</td><td class="r" style="color:${vm>5?'var(--red)':vm<-5?'var(--teal)':'inherit'}">${(vm>=0?'+':'')+vm.toFixed(1)}%</td><td class="r">${fmt(ay)}</td><td class="r">${fmt(by)}</td><td class="r" style="color:${vy>5?'var(--red)':vy<-5?'var(--teal)':'inherit'}">${(vy>=0?'+':'')+vy.toFixed(1)}%</td><td class="r">${ahc??'—'}</td><td class="r">${bhc??'—'}</td><td class="r">${dhc!==null?(dhc>0?'+':'')+dhc:'—'}</td><td class="r">${cppA}</td><td class="r">${cppB}</td><td class="r" style="color:${used>105?'var(--red)':used>95?'var(--amber)':'inherit'}">${used.toFixed(1)}%</td></tr>`;
+    }).join('');
+  }
+}
+</script>
+</body>
+</html>
