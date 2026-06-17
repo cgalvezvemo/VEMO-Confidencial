@@ -1140,10 +1140,11 @@ function vbBudgetFor(s){
   if(!BUDGET.year) return null;
   if(s.type==='vemo') return BUDGET.total||null;
   if(s.type==='sga'){
-    if(!BUDGET.total) return null;
-    const _h=BUDGET.vcn_hubs||{};
-    return {mxn:(BUDGET.total.mxn||[]).map((v,i)=>v-(((_h.mxn)||[])[i]||0)),
-            hc: (BUDGET.total.hc||[]).map((v,i)=>v-(((_h.hc)||[])[i]||0))};
+    const _bls=['CORPORATE','CROSS FUNCTIONAL'];
+    const _fs=_bls.flatMap(b=>(BL_DATA[b]?.empresas||[])).filter(n=>BUDGET.funcs[n]&&BUDGET.funcs[n].mxn);
+    if(!_fs.length) return BUDGET.total||null;
+    return {mxn:Array.from({length:12},(_,i)=>_fs.reduce((a,n)=>a+BUDGET.funcs[n].mxn[i],0)),
+            hc: Array.from({length:12},(_,i)=>_fs.reduce((a,n)=>a+((BUDGET.funcs[n].hc||[])[i]||0),0))};
   }
   if(s.type==='bl'){
     const names=BL_DATA[s.bl].empresas;
@@ -1159,11 +1160,9 @@ function vbBudgetFor(s){
 function vbActualFor(s){
   if(s.type==='vemo') return {m:MESES.map((_,i)=>COSTO_MES.reduce((a,e)=>a+e[i],0)),h:HC_MES};
   if(s.type==='sga'){
-    const _hub=BL_DATA['VCN']?.rows?.[0]?.areas?.['CENTRO DE RECARGA HUB PUBLICO'];
-    const _hm=_hub?.monthly||[];
-    const _hh=_hub?.monthly_hc||[];
-    return {m:MESES.map((_,i)=>COSTO_MES.reduce((a,e)=>a+e[i],0)-(_hm[i]||0)),
-            h:Array.from({length:MESES.length},(_,i)=>(HC_MES[i]||0)-(_hh[i]||0))};
+    const _k=['CORPORATE','CROSS FUNCTIONAL'].filter(k=>BL_DATA[k]);
+    return {m:MESES.map((_,i)=>_k.reduce((a,k)=>a+(BL_DATA[k].monthly[i]||0),0)),
+            h:MESES.map((_,i)=>_k.reduce((a,k)=>a+(BL_DATA[k].monthly_hc[i]||0),0))};
   }
   if(s.type==='bl') return {m:BL_DATA[s.bl].monthly,h:BL_DATA[s.bl].monthly_hc};
   if(s.type==='func'){const r=BL_DATA[s.bl].rows.find(r=>r.name===s.name);return r?{m:r.monthly,h:r.monthly_hc}:null;}
@@ -1171,8 +1170,8 @@ function vbActualFor(s){
   return null;
 }
 function vbName(s){
-  if(s.type==='vemo') return 'Total VEMO';
-  if(s.type==='sga') return 'Total VEMO (SG&A)';
+  if(s.type==='vemo') return 'Total VEMO (OPEX + SG&A)';
+  if(s.type==='sga') return 'Total SG&A';
   if(s.type==='bl') return s.bl;
   return s.name+' · '+(s.type==='dep'?'LTO':s.bl);
 }
@@ -1199,8 +1198,8 @@ function vbSetPeriod(p){vbPeriod=p;vbRender();}
 function vbRender(){
   // chips de alcance
   document.getElementById('vbScopeChips').innerHTML=
-    `<button class="chip-btn${vbScope.type==='vemo'?' active':''}" onclick="vbSetScope({type:'vemo'})"><div class="chip-name">Total VEMO</div></button>`+
-    `<button class="chip-btn${vbScope.type==='sga'?' active':''}" onclick="vbSetScope({type:'sga'})"><div class="chip-name">SG&A (sin Hubs)</div></button>`+
+    `<button class="chip-btn${vbScope.type==='vemo'?' active':''}" onclick="vbSetScope({type:'vemo'})"><div class="chip-name">Total VEMO (OPEX+SG&A)</div></button>`+
+    `<button class="chip-btn${vbScope.type==='sga'?' active':''}" onclick="vbSetScope({type:'sga'})"><div class="chip-name">Total SG&A</div></button>`+
     Object.keys(BL_DATA).map(b=>`<button class="chip-btn${vbScope.type==='bl'&&vbScope.bl===b?' active':''}" onclick="vbSetScope({type:'bl',bl:'${esc(b)}'})"><div class="chip-name">${b}</div></button>`).join('');
   // chips secundarios (funciones / deptos LTO con budget)
   const sub=document.getElementById('vbSubChips');
