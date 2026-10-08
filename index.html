@@ -59,6 +59,7 @@ header{background:var(--forest);border-bottom:none;padding:0 28px;height:56px;di
 /* ── CARD ── */
 .card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:20px;box-shadow:0 1px 3px rgba(31,85,86,.06);}
 .ctitle{font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;}
+.tgl{cursor:pointer;font:inherit;}.tgl:hover{border-color:#11ABAB;color:#11ABAB}.tgl.on{background:#11ABAB;border-color:#11ABAB;color:#fff}.trd-note{margin-top:10px;font-size:11px;line-height:1.45;color:var(--text2);border-left:3px solid #f59e0b;padding:4px 10px;background:var(--s2);border-radius:4px}
 .tag{font-family:'Space Grotesk',sans-serif;text-transform:none;letter-spacing:0;font-weight:500;font-size:10px;color:var(--text2);background:var(--s2);border:1px solid var(--border);padding:2px 8px;border-radius:4px;}
 .avg-chip{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:rgba(17,171,171,.1);color:var(--teal);}
 
@@ -155,7 +156,7 @@ tr:hover td{background:rgba(17,171,171,.04);}
   </div>
   <div class="sec-lbl">Tendencia anual</div>
   <div class="g3">
-    <div class="card"><div class="ctitle">Costo mensual &amp; Headcount <span class="tag">Eje izq MXN · der empleados</span></div><div style="height:280px"><canvas id="cTrend"></canvas></div></div>
+    <div class="card"><div class="ctitle">Costo mensual &amp; Headcount <span style="display:flex;gap:6px;align-items:center"><button class="tag tgl on" id="trd-all" onclick="setTrendMode('all')">Con Argentina</button><button class="tag tgl" id="trd-org" onclick="setTrendMode('org')">Sin Argentina (orgánico)</button><span class="tag">Eje izq MXN · der empleados</span></span></div><div style="height:280px"><canvas id="cTrend"></canvas></div><div id="trd-note" class="trd-note"></div></div>
     <div class="card"><div class="ctitle">Composición por empresa <span class="tag" id="tag-period"></span></div><div style="height:280px"><canvas id="cPie"></canvas></div></div>
   </div>
   <div class="g2" style="margin-top:0;">
@@ -483,7 +484,46 @@ const avgMes=totalMes.map((c,i)=>HC_MES[i]>0?Math.round(c/HC_MES[i]):0);
 const payrollPctRev=REVENUE_MES.map((r,i)=>r?+(totalMes[i]/r*100).toFixed(2):null);
 const revPerEmp=REVENUE_MES.map((r,i)=>r&&HC_MES[i]?Math.round(r/HC_MES[i]):null);
 
-new Chart(document.getElementById('cTrend'),{type:'bar',data:{labels:MESES,datasets:[
+// ── Perímetro Argentina en tendencia anual (Base ARG solo existe desde 2026) ──
+const ARG_I=EMPRESAS.indexOf('TECH & IT');
+const ARG_C=ARG_I>=0?COSTO_MES[ARG_I]:MESES.map(()=>0);
+const ARG_H=ARG_I>=0?HC_EMP[ARG_I]:MESES.map(()=>0);
+const ARG_START=ARG_C.findIndex(v=>v>0);
+const totalMesX=totalMes.map((v,i)=>v-ARG_C[i]);
+const hcMesX=HC_MES.map((v,i)=>v-ARG_H[i]);
+const avgMesX=totalMesX.map((c,i)=>hcMesX[i]>0?Math.round(c/hcMesX[i]):0);
+let trendMode='all';
+Chart.register({id:'argMark',afterDatasetsDraw(ch){
+  if(ch.canvas.id!=='cTrend'||ARG_START<1||trendMode!=='all')return;
+  const xs=ch.scales.x,a=ch.chartArea,c=ch.ctx;
+  const x=(xs.getPixelForValue(ARG_START-1)+xs.getPixelForValue(ARG_START))/2;
+  c.save();c.strokeStyle='#f59e0b';c.lineWidth=1.5;c.setLineDash([5,4]);
+  c.beginPath();c.moveTo(x,a.top);c.lineTo(x,a.bottom);c.stroke();c.setLineDash([]);
+  c.font="600 10px 'Space Grotesk',sans-serif";c.fillStyle='#f59e0b';c.textAlign='right';
+  c.fillText('Inicio Base ARG ▸',x-4,a.top+10);c.restore();
+}});
+function trendNote(){
+  const el=document.getElementById('trd-note');if(!el)return;
+  if(ARG_START<0){el.style.display='none';return;}
+  const yo=LM-12, pct=(a,b)=>b?((a/b-1)*100).toFixed(0)+'%':'—';
+  const yoy=yo>=0?` · ${LMLBL} vs ${MESES[yo]}: HC ${pct(HC_MES[LM],HC_MES[yo])} con ARG / ${pct(hcMesX[LM],hcMesX[yo])} orgánico; costo ${pct(totalMes[LM],totalMes[yo])} con ARG / ${pct(totalMesX[LM],totalMesX[yo])} orgánico`:'';
+  el.innerHTML=trendMode==='all'
+    ?`<b>Ojo:</b> desde ${MESES[ARG_START]} la serie incluye Argentina (Tech &amp; IT, USD→MXN; ${ARG_H[LM]} HC / ${fmt(ARG_C[LM])} en ${LMLBL}). Antes no hay base ARG, así que el salto en ${MESES[ARG_START]} no es crecimiento orgánico${yoy}.`
+    :`<b>Perímetro México comparable</b> (excluye Argentina en todos los meses)${yoy}. Budget oculto: el plan incluye Argentina dentro de Tech &amp; IT.`;
+}
+function setTrendMode(m){
+  trendMode=m;const ch=window.TREND_CH;if(!ch)return;const o=m==='org';
+  ch.data.datasets[0].data=o?hcMesX:HC_MES;
+  ch.data.datasets[1].data=o?avgMesX:avgMes;
+  ch.data.datasets[2].data=o?totalMesX:totalMes;
+  ch.data.datasets[3].hidden=o;
+  ch.update();
+  document.getElementById('trd-all').classList.toggle('on',!o);
+  document.getElementById('trd-org').classList.toggle('on',o);
+  trendNote();
+}
+setTimeout(trendNote,0);
+window.TREND_CH=new Chart(document.getElementById('cTrend'),{type:'bar',data:{labels:MESES,datasets:[
   {type:'line',label:'HC',data:HC_MES,borderColor:'#2db8b8',backgroundColor:'rgba(45,184,184,.06)',borderWidth:2,pointBackgroundColor:'#43c59d',pointBorderColor:'#0a2f2f',pointBorderWidth:2,pointRadius:3,tension:0.4,yAxisID:'y2',order:1},
   {type:'line',label:'Costo/Cabeza',data:avgMes,borderColor:'#11ABAB',borderDash:[4,3],borderWidth:2,pointRadius:3,pointBackgroundColor:'#11ABAB',tension:0.4,yAxisID:'y3',order:0},
   {type:'bar',label:'Costo Total',data:totalMes,backgroundColor:totalMes.map((_,i)=>`rgba(17,171,171,${0.22+i*0.062})`),borderColor:'#11ABAB',borderWidth:1,borderRadius:5,borderSkipped:false,yAxisID:'y',order:2},
